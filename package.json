@@ -1,14 +1,15 @@
 {
-  "name": "site_chat_cdk",
+  "name": "lore_chat_cdk",
   "version": "0.1.0",
   "bin": {
-    "site_chat_cdk": "bin/site_chat_cdk.js"
+    "lore_chat_cdk": "bin/lore_chat_cdk.js"
   },
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "cdk-finch": "CDK_DOCKER=finch USE_FINCH=1 cdk"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

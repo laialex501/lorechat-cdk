@@ -1,0 +1,226 @@
+# LoreChatCDK Project Rules and Patterns
+
+## Project Intelligence
+
+### 1. Stack Organization Patterns
+- Clear separation between infrastructure components
+- Stack dependencies managed through cross-stack references
+- Environment-specific configurations
+- Resource naming follows consistent patterns
+
+### 2. Implementation Patterns
+```typescript
+// Stack Pattern
+export class BaseStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+    // Implementation
+  }
+}
+
+// Environment Configuration Pattern
+interface EnvironmentConfig {
+  readonly vpcCidr: string;
+  readonly maxAzs: number;
+  readonly environment: string;
+}
+```
+
+### 3. Configuration Patterns
+- Context values in cdk.json
+- Environment variables for sensitive data
+- Stack-specific configuration objects
+- Cross-stack reference management
+
+### 4. Development Workflow
+- CDK synth for template validation
+- CDK diff before deployment
+- Environment-specific deployments
+- Asset management
+
+## Project Preferences
+
+### 1. Code Style
+- TypeScript strict mode
+- ESLint configuration
+- Consistent naming conventions
+- Comprehensive comments
+- Type definitions
+
+### 2. File Organization
+```
+cdk/
+├── bin/          # CDK app entry point
+├── lib/          # Stack implementations
+│   ├── stacks/   # Individual stacks
+│   └── constructs/ # Custom constructs
+├── test/         # Test files
+└── config/       # Environment configs
+```
+
+### 3. Naming Conventions
+- Stacks: PascalCase with 'Stack' suffix
+- Constructs: PascalCase
+- Methods: camelCase
+- Constants: UPPER_SNAKE_CASE
+- Interfaces: PascalCase with 'I' prefix
+- Types: PascalCase
+
+### 4. Documentation
+- Stack purpose and dependencies
+- Resource configurations
+- Environment requirements
+- Deployment instructions
+- Testing procedures
+
+## Critical Paths
+
+### 1. Stack Dependencies
+```typescript
+// Infrastructure dependencies
+VPC -> SecurityGroups -> ECS -> Services
+```
+
+### 2. Deployment Flow
+```typescript
+// Deployment order
+Infrastructure -> LLM -> Service -> Monitoring
+```
+
+### 3. Security Configuration
+```typescript
+// Security group configuration
+VPC -> SecurityGroups -> Services -> External Access
+```
+
+## Known Challenges
+
+### 1. Infrastructure Deployment
+- Stack dependency order
+- Cross-stack references
+- Resource deletion policies
+- Update/replace behaviors
+
+### 2. Implementation Details
+- VPC configuration complexity
+- ECS service integration
+- OpenSearch domain setup
+- Bedrock integration
+- Monitoring configuration
+
+## Tool Usage Patterns
+
+### 1. CDK Commands
+```bash
+# Synthesize CloudFormation template
+cdk synth
+
+# Deploy specific stack
+cdk deploy StackName
+
+# Compare changes
+cdk diff
+
+# Destroy resources
+cdk destroy
+```
+
+### 2. Development Tools
+```bash
+# Run tests
+npm test
+
+# Lint code
+npm run lint
+
+# Build project
+npm run build
+```
+
+## AWS Integration
+
+### 1. Service Configuration
+- VPC setup requirements
+- ECS task definitions
+- OpenSearch domain configuration
+- CloudWatch setup
+
+### 2. Security Setup
+- IAM role configuration
+- Security group rules
+- Network ACL settings
+- Secret management
+
+## Error Handling
+
+### 1. Pattern
+```typescript
+try {
+  // CDK operation
+} catch (error) {
+  // Log error details
+  // Handle specific error cases
+}
+```
+
+### 2. Error Types
+- Stack deployment errors
+- Resource creation failures
+- Permission issues
+- Configuration errors
+
+## Performance Considerations
+
+### 1. Resource Management
+- Instance sizing
+- Auto-scaling configuration
+- Cost optimization
+- Resource limits
+
+### 2. Optimization Points
+- VPC design
+- NAT Gateway placement
+- OpenSearch configuration
+- Container resources
+
+## Security Practices
+
+### 1. Configuration
+- Least privilege IAM
+- Network isolation
+- Secret management
+- Access logging
+
+### 2. Runtime
+- Security group rules
+- Network ACLs
+- VPC endpoints
+- Service policies
+
+## Testing Strategy
+
+### 1. Unit Tests
+- Stack validation
+- Construct testing
+- Property verification
+- Resource configuration
+
+### 2. Integration Tests
+- Stack deployment
+- Resource creation
+- Service integration
+- Cross-stack references
+
+## Monitoring Approach
+
+### 1. CloudWatch
+- Dashboard configuration
+- Alarm setup
+- Log management
+- Metric collection
+
+### 2. Metrics
+- Resource utilization
+- Service health
+- Cost tracking
+- Performance monitoring

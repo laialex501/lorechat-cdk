@@ -1,17 +1,16 @@
 // import * as cdk from 'aws-cdk-lib';
 // import { Template } from 'aws-cdk-lib/assertions';
-// import * as SiteChatCdk from '../lib/site_chat_cdk-stack';
+// import * as LoreChatCdk from '../lib/lore_chat_cdk-stack';
 
 // example test. To run these tests, uncomment this file along with the
-// example resource in lib/site_chat_cdk-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new SiteChatCdk.SiteChatCdkStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
-
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+// example resource in lib/lore_chat_cdk-stack.ts
+test("SQS Queue Created", () => {
+  //   const app = new cdk.App();
+  //     // WHEN
+  //   const stack = new LoreChatCdk.LoreChatCdkStack(app, 'MyTestStack');
+  //     // THEN
+  //   const template = Template.fromStack(stack);
+  //   template.hasResourceProperties('AWS::SQS::Queue', {
+  //     VisibilityTimeout: 300
+  //   });
 });

@@ -4,12 +4,10 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import { Construct } from "constructs";
 import { Constants } from "../../config/constants";
 import { InfrastructureStack } from "./infrastructure_stack";
-import { LLMStack } from "./llm_stack";
 import { ServiceStack } from "./service_stack";
 
 export interface MonitoringStackProps extends cdk.StackProps {
   infrastructureStack: InfrastructureStack;
-  llmStack: LLMStack;
   serviceStack: ServiceStack;
 }
 
@@ -18,36 +16,28 @@ export class MonitoringStack extends cdk.Stack {
     super(scope, id, props);
 
     // Create a CloudWatch dashboard
-    const dashboard = new cloudwatch.Dashboard(this, "SiteChatDashboard", {
-      dashboardName: "SiteChat-Dashboard",
+    const dashboard = new cloudwatch.Dashboard(this, "LoreChatDashboard", {
+      dashboardName: "LoreChat-Dashboard",
     });
 
-    // Add a widget for ECS CPU utilization
+    // Add widgets to the dashboard
     dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: "ECS CPU Utilization",
         left: [props.serviceStack.fargateService.metricCpuUtilization()],
-      })
-    );
-
-    // Add a widget for ECS Memory utilization
-    dashboard.addWidgets(
+      }),
       new cloudwatch.GraphWidget({
         title: "ECS Memory Utilization",
         left: [props.serviceStack.fargateService.metricMemoryUtilization()],
-      })
-    );
-
-    // Add a widget for ALB Request Count
-    dashboard.addWidgets(
+      }),
       new cloudwatch.GraphWidget({
         title: "ALB Request Count",
-        left: [props.infrastructureStack.alb.metricRequestCount()],
+        left: [props.infrastructureStack.alb.metrics.requestCount()],
       })
     );
 
     // Create a budget
-    new budgets.CfnBudget(this, "MonthlyBudget", {
+    const budget = new budgets.CfnBudget(this, "MonthlyBudget", {
       budget: {
         budgetType: "COST",
         timeUnit: "MONTHLY",
@@ -78,14 +68,14 @@ export class MonitoringStack extends cdk.Stack {
     props.infrastructureStack.vpc.addFlowLog("FlowLog");
 
     // Add CloudWatch Alarms
-    new cloudwatch.Alarm(this, "HighCPUAlarm", {
+    const cpuAlarm = new cloudwatch.Alarm(this, "HighCPUAlarm", {
       metric: props.serviceStack.fargateService.metricCpuUtilization(),
       threshold: 80,
       evaluationPeriods: 3,
       datapointsToAlarm: 2,
     });
 
-    new cloudwatch.Alarm(this, "HighMemoryAlarm", {
+    const memoryAlarm = new cloudwatch.Alarm(this, "HighMemoryAlarm", {
       metric: props.serviceStack.fargateService.metricMemoryUtilization(),
       threshold: 80,
       evaluationPeriods: 3,

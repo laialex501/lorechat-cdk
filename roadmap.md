@@ -1,4 +1,4 @@
-# SiteChatCDK Roadmap
+# LoreChatCDK Roadmap
 
 ## Phase 1: Foundation (Completed)
 
@@ -11,10 +11,10 @@
 
 ### Core Infrastructure
 - [x] Implement Infrastructure Stack
-  - [x] Single-AZ VPC configuration
+  - [x] Dual-AZ VPC configuration
   - [x] Security groups
   - [x] Route 53 setup
-  - [x] CloudFront distribution with caching
+  - [x] CloudFront distribution
   - [x] WAF configuration
   - [x] SSL/TLS certificate management
 - [x] Basic testing framework
@@ -25,14 +25,14 @@
 ### Service and LLM Integration
 - [x] Implement Service Stack
   - [x] ECS Fargate cluster with Spot instances
-  - [x] Internal Application Load Balancer setup
+  - [x] Public Application Load Balancer setup
   - [x] Task definition and service configuration
   - [x] Log group setup with 1-week retention
   - [x] Auto-scaling configuration (1-4 instances)
-- [x] Implement LLM Stack
-  - [x] OpenSearch domain configuration (t3.small.search)
+- [x] Implement LLM integration
   - [x] Bedrock integration
 - [x] Integration testing
+- [x] Update ALB from internal to public-facing
 
 ### Monitoring and Cost Optimization
 - [x] Implement Monitoring Stack
@@ -45,25 +45,46 @@
   - [x] Free tier eligible resources where possible
   - [x] CloudFront caching to reduce origin requests
   - [x] Short log retention periods
+- [x] Implement cost management tags
+  - [x] Define tagging strategy
+  - [x] Implement automated tag application using CDK constructs
 
-## Phase 3: Security Enhancements and Documentation (Current)
+## Phase 3: Data Processing and Vector Storage (Current)
 
-### Security Improvements
-- [x] Implement least privilege IAM policies
-- [x] Limit security groups to CloudFront IPs
-- [x] Integrate Secrets Manager for API keys
-- [ ] Conduct comprehensive security review
-- [ ] Implement additional security monitoring and alerting
+### Data Stack Implementation
+- [x] Design Data Stack architecture
+- [x] Implement Data Stack
+  - [x] Set up Source S3 bucket for direct client upload
+  - [x] Set up Processed S3 bucket
+  - [x] Create Data Processing Lambda function
+  - [x] Create Vectorization Lambda function
+  - [x] Integrate Upstash Vector for efficient vector storage
+- [x] Configure S3 event notifications
+- [x] Implement Bedrock integration for embeddings generation
+- [ ] Develop comprehensive error handling and logging
+- [ ] Create unit tests for Lambda functions
+- [ ] Implement integration tests for the data pipeline
+- [ ] Implement secure client-side upload mechanism
+
+### Security Enhancements
+- [x] Implement least privilege IAM policies for Lambda functions
+- [x] Set up Secrets Manager for Upstash Vector credentials
+- [x] Configure S3 bucket policies for data protection
+- [x] Implement encryption for data at rest and in transit
+- [ ] Implement secure access controls for direct client uploads
 
 ### Documentation and Testing
 - [x] Update README with latest architecture and features
 - [x] Revise requirements document
-- [ ] Complete deployment documentation
+- [x] Update system patterns and technical context
+- [ ] Create documentation for the data processing pipeline
+- [ ] Update deployment documentation
+- [ ] Create client upload guidelines
 - [ ] Enhance testing suite
   - [ ] Unit tests for all stacks
-  - [ ] Integration tests
-  - [ ] Deployment tests
-- [ ] Finalize technical documentation in memory-bank
+  - [ ] Integration tests for the data pipeline
+  - [ ] Performance tests for vector storage and retrieval
+  - [ ] Load tests for service container
 
 ## Phase 4: Production Readiness and Advanced Features (Future)
 
@@ -74,20 +95,26 @@
 - [ ] Conduct load testing and performance optimization
 
 ### Advanced Features
-- [ ] Implement custom CloudWatch metrics for application-specific monitoring
+- [ ] Implement custom CloudWatch metrics for monitoring
+- [ ] Explore AWS Step Functions for complex data processing workflows
 - [ ] Explore AWS X-Ray integration for distributed tracing
-- [ ] Investigate AWS Step Functions for complex workflow management
-- [ ] Consider implementing AWS ECS Service Connect for service discovery
+- [ ] Investigate AWS Glue for potential data catalog integration
+- [ ] Consider implementing vector database caching mechanisms
+- [ ] Explore agentic AI workflows for container application
+- [ ] Explore voice-to-text integration for container application
 
 ### Continuous Improvement
 - [ ] Regular security audits and updates
 - [ ] Ongoing cost optimization reviews
 - [ ] Performance monitoring and enhancements
 - [ ] Stay updated with latest AWS features and best practices
+- [ ] Regular review and optimization of cost management tags
 
 ### Potential Expansions
 - [ ] Multi-region deployment for improved latency and redundancy
-- [ ] Implement canary deployments for risk mitigation
+- [ ] Implement canary deployments for data pipeline updates
+- [ ] Explore advanced vector search algorithms and optimizations
+- [ ] Consider implementing a data versioning system
 - [ ] Explore container image scanning for enhanced security
 - [ ] Consider AWS ECS Exec for debugging in production
 
@@ -99,18 +126,22 @@
 - [x] Initial documentation
 
 ### Milestone 2: Service Deployment (Completed)
-- [x] Complete Service and LLM Stacks
+- [x] Complete Service Stack
 - [x] Integration testing
 - [x] Auto-scaling and cost optimization
 
-### Milestone 3: Monitoring and Security (In Progress)
-- [x] Complete Monitoring Stack
-- [x] Implement cost management features
-- [ ] Enhance security measures
-- [ ] Comprehensive testing suite
+### Milestone 3: Data Processing and Vector Storage (In Progress)
+- [x] Complete Data Stack implementation
+- [x] Integrate Upstash Vector
+- [ ] Comprehensive testing suite for data pipeline
+- [ ] Data pipeline documentation and monitoring
 
 ### Milestone 4: Production Ready (Future)
-- [ ] Complete production configuration
+- [ ] Complete production configuration for all stacks
 - [ ] Implement advanced deployment strategies
 - [ ] Disaster recovery planning
+- [ ] Performance optimization for data processing and vector operations
+- [ ] Implement cost management features
+- [ ] Enhance security measures
+- [ ] Comprehensive testing suite
 - [ ] Final security review and documentation
