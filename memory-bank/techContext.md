@@ -38,35 +38,68 @@ graph TD
 
 ## Service Architecture
 
-### AWS Service Integration
+### AWS Service Integration & Data Flow
 ```mermaid
 graph TD
-    subgraph "Infrastructure"
+    subgraph "Edge Layer"
         CF[CloudFront] --> WAF
         WAF --> ALB[Load Balancer]
         R53[Route 53] --> CF
     end
     
-    subgraph "Compute"
-        ALB --> ECS[ECS Fargate]
-        ECS --> App[LoreChat App]
+    subgraph "WebSocket Handling"
+        ALB --> WS[WebSocket Connection]
+        WS --> ECS[ECS Fargate]
+        WS --> SA[Session Affinity]
     end
     
     subgraph "Data Processing"
-        S3[Source S3] --> Lambda[Processing]
-        Lambda --> Vec[Vectorization]
+        S3[Source S3] --> PL[Processing Lambda]
+        PL --> VL[Vectorization Lambda]
+        VL --> VS[Vector Storage]
     end
     
-    subgraph "External Services"
-        App --> UV[Upstash Vector]
-        App --> LLM[LLM Services]
+    subgraph "AI Services"
+        ECS --> Vec[Vector Search]
+        ECS --> LLM[LLM Services]
+        Vec --> Hyb[Hybrid Search]
     end
     
     subgraph "Monitoring"
         CW[CloudWatch] --> Dash[Dashboards]
         CW --> Log[Logs]
-        CW --> Alarm[Alarms]
+        CW --> Met[Custom Metrics]
+        Met --> Alarm[Alarms]
     end
+```
+
+### WebSocket Configuration
+```typescript
+// CloudFront WebSocket setup
+const webSocketBehavior = new cloudfront.BehaviorOptions({
+  allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+  originRequestPolicy: new cloudfront.OriginRequestPolicy(this, 'WebSocketPolicy', {
+    headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
+      'Sec-WebSocket-Key',
+      'Sec-WebSocket-Version',
+      'Sec-WebSocket-Protocol',
+      'Sec-WebSocket-Accept'
+    ),
+    queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all()
+  })
+});
+
+// ALB WebSocket target group
+const webSocketTargetGroup = new elbv2.ApplicationTargetGroup(this, 'WebSocketGroup', {
+  vpc,
+  protocol: elbv2.ApplicationProtocol.HTTP,
+  targetType: elbv2.TargetType.IP,
+  healthCheck: {
+    path: '/health',
+    timeout: Duration.seconds(5),
+    interval: Duration.seconds(30)
+  }
+});
 ```
 
 ### Development Workflow
@@ -84,11 +117,45 @@ graph LR
 ## Technical Implementation
 
 ### 1. Infrastructure Components
+
+#### Edge & Network Layer
 - Multi-AZ deployment with public subnets
 - CloudFront + WAF for security and caching
+- Custom WebSocket configuration
+- Session affinity for connections
+
+#### Compute Layer
 - ECS Fargate with Spot instances
-- S3-based data processing pipeline
-- Upstash Vector for vector storage
+- Auto-scaling based on multiple metrics
+- Task definition optimization
+- Resource utilization monitoring
+
+#### Data Processing
+- S3-based processing pipeline
+- Optimized chunking strategy
+- Parallel processing implementation
+- Error handling and recovery
+
+#### Search Implementation
+```typescript
+// Hybrid search configuration
+class HybridSearchService implements SearchService {
+  async search(query: string): Promise<SearchResult[]> {
+    // Generate embeddings
+    const denseVector = await this.embeddings.embedQuery(query);
+    const sparseVector = this.generateSparseVector(query);
+    
+    // Parallel search execution
+    const [denseResults, sparseResults] = await Promise.all([
+      this.denseSearch(denseVector),
+      this.sparseSearch(sparseVector)
+    ]);
+    
+    // Reciprocal Rank Fusion
+    return this.fuseResults(denseResults, sparseResults);
+  }
+}
+```
 
 ### 2. Security Implementation
 - WAF rules and rate limiting
@@ -142,18 +209,107 @@ graph LR
 - Rollback Strategy: CloudFormation automatic rollback on failure
 
 ## Resource Management
-- VPC: Dual AZ (required for ALB), public subnets only, no NAT Gateways
-- ECS: Fargate Spot, minimal compute (0.5 vCPU, 1024MB RAM), auto-scaling (1-4 instances)
-- Security: Least privilege IAM, CloudFront-only security groups, WAF rate limiting, S3 bucket policies
-- Storage: Upstash Vector for efficient vector storage, S3 for raw and processed data
-- Compute: Lambda functions for data processing and vectorization
-- Monitoring: 1-week log retention, CloudWatch dashboards, VPC Flow Logs
-- Caching: CloudFront with separate policies for static assets and API responses
+
+### Compute Resources
+```typescript
+// ECS Task Definition
+const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
+  cpu: 256,
+  memoryLimitMiB: 512,
+  ephemeralStorageGiB: 21
+});
+
+// Auto-scaling configuration
+const scaling = service.autoScaleTaskCount({
+  maxCapacity: 4,
+  minCapacity: 1
+});
+
+scaling.scaleOnCpuUtilization('CpuScaling', {
+  targetUtilizationPercent: 70,
+  scaleInCooldown: Duration.seconds(60),
+  scaleOutCooldown: Duration.seconds(30)
+});
+
+scaling.scaleOnRequestCount('RequestScaling', {
+  targetRequestsPerSecond: 100
+});
+```
+
+### Infrastructure Resources
+- VPC: Dual AZ, public subnets, no NAT Gateways
+- ECS: Fargate Spot, optimized compute settings
+- Security: Least privilege IAM, CloudFront-only access
+- Storage: Hybrid vector search implementation
+- Compute: Optimized Lambda configurations
+- Monitoring: Enhanced CloudWatch integration
+- Caching: Intelligent CloudFront policies
 
 ## Development Guidelines
-- CDK Best Practices: L2 constructs, cross-stack references, proper tagging
-- Security Best Practices: Least privilege IAM, WAF protection, Secrets Manager, S3 bucket policies
-- Cost Optimization: Free tier resources, Fargate Spot, CloudFront caching, minimal AZ count (2), efficient Lambda execution
-- Maintainability: Clear stack separation, comprehensive documentation, memory bank updates
-- Data Processing: Efficient Lambda functions, proper error handling and retries
-- Vector Storage: Optimal use of Upstash Vector for fast and cost-effective vector operations
+
+### Infrastructure as Code
+- CDK Best Practices: L2 constructs, cross-stack references
+- Type-safe infrastructure with proper interfaces
+- Reusable component patterns
+- Automated testing capabilities
+
+### Security Implementation
+```typescript
+// Security group configuration
+const securityGroup = new ec2.SecurityGroup(this, 'ServiceSG', {
+  vpc,
+  description: 'Security group for LoreChat service',
+  allowAllOutbound: false
+});
+
+// CloudFront-only access
+securityGroup.addIngressRule(
+  ec2.Peer.ipv4(cloudFrontIp),
+  ec2.Port.tcp(443),
+  'Allow HTTPS from CloudFront'
+);
+
+// WAF configuration
+const waf = new wafv2.CfnWebACL(this, 'WAF', {
+  defaultAction: { allow: {} },
+  scope: 'CLOUDFRONT',
+  visibilityConfig: {
+    cloudWatchMetricsEnabled: true,
+    metricName: 'WAFMetrics',
+    sampledRequestsEnabled: true
+  },
+  rules: [
+    // Rate limiting
+    {
+      name: 'RateLimit',
+      priority: 1,
+      action: { block: {} },
+      statement: {
+        rateBasedStatement: {
+          limit: 2000,
+          aggregateKeyType: 'IP'
+        }
+      },
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: 'RateLimitMetric',
+        sampledRequestsEnabled: true
+      }
+    }
+  ]
+});
+```
+
+### Resource Optimization
+- Free tier resource utilization
+- Spot instance management
+- Efficient Lambda execution
+- Optimized vector operations
+- Smart caching strategies
+
+### Development Workflow
+- Clear stack separation
+- Comprehensive documentation
+- Memory bank synchronization
+- Systematic testing approach
+- Performance monitoring

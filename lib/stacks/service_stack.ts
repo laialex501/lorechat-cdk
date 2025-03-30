@@ -117,6 +117,7 @@ export class ServiceStack extends cdk.Stack {
           props.infrastructureStack.tavilyAPISecret.secretName,
         BEDROCK_EMBEDDING_MODEL_ID: Constants.EMBEDDING_MODEL_ID,
         EMBEDDING_DIMENSIONS: Constants.EMBEDDING_DIMENSIONS.toString(),
+        VECTOR_STORE_PROVIDER: "upstash", // Force Upstash in production
       },
       portMappings: [{ containerPort: Constants.STREAMLIT_PORT }],
       command: ["streamlit", "run", "main.py"],

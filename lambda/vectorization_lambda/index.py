@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
 from botocore.client import BaseClient
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pydantic import BaseModel, Field
 from upstash_vector import Index, Vector
 from upstash_vector.types import SparseVector
@@ -15,6 +16,9 @@ from upstash_vector.types import SparseVector
 # Configure logging
 logger = logging.getLogger()
 logger.setLevel(os.environ.get('LOG_LEVEL', 'INFO'))
+
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 100
 
 
 class ProcessedItem(BaseModel):
@@ -142,11 +146,32 @@ def generate_bedrock_embeddings(
         raise
 
 
+def create_text_chunks(text: str, title: Optional[str] = None) -> List[str]:
+    """Split text into chunks using RecursiveCharacterTextSplitter"""
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,  # Approximately 512 tokens
+        chunk_overlap=CHUNK_OVERLAP,
+        length_function=len,
+        separators=["\n## ", "\n# ", "\n### ", "\n\n", "\n", " ", ""]
+    )
+    
+    # If text is short enough, return as single chunk
+    if len(text) < CHUNK_SIZE:
+        return [text]
+    
+    # Add title to beginning of text if provided
+    if title:
+        text = f"# {title}\n\n{text}"
+    
+    chunks = text_splitter.split_text(text)
+    return chunks
+
+
 def prepare_vector_item(
     item_data: Tuple[int, str, str],
     bedrock_client: BaseClient
-) -> Tuple[Optional[Vector], Optional[str]]:
-    """Prepare a vector item with embeddings generation"""
+) -> List[Tuple[Optional[Vector], Optional[str]]]:
+    """Prepare vector items with embeddings generation and chunking"""
     idx, line, source_key = item_data
     try:
         item = ProcessedItem.model_validate(json.loads(line))
@@ -159,43 +184,53 @@ def prepare_vector_item(
         else:
             text_for_embedding = item.markdown
 
-        # Generate embeddings
-        logger.info(f"Generating embeddings for item {idx + 1}")
-        embeddings = generate_bedrock_embeddings(
-            bedrock_client,
-            text_for_embedding
-        )
+        # Split text into chunks
+        chunks = create_text_chunks(text_for_embedding, item.title)
+        vectors = []
 
-        # Create sparse vector
-        sparse_vector = create_sparse_vector(embeddings)
-        sparsity = len(sparse_vector.indices) / len(embeddings)
-        logger.info(f"Sparsity of output vector: {sparsity}")
+        # Process each chunk
+        for chunk_idx, chunk in enumerate(chunks):
+            # Generate embeddings for chunk
+            logger.info(f"Generating embeddings for item {idx + 1}, chunk {chunk_idx + 1}")
+            embeddings = generate_bedrock_embeddings(
+                bedrock_client,
+                chunk
+            )
 
-        # Create unique vector ID
-        vector_id = f"{source_key}_{idx}"
+            # Create sparse vector
+            sparse_vector = create_sparse_vector(embeddings)
+            sparsity = len(sparse_vector.indices) / len(embeddings)
+            logger.info(f"Sparsity of output vector: {sparsity}")
 
-        # Create the vector object
-        vector = Vector(
-            id=vector_id,
-            vector=embeddings,
-            sparse_vector=sparse_vector,
-            metadata={
-                "title": item.title,
-                "source_text": item.source_text,
-                "source_link": item.source_link,
-                "url": item.url,
-                "content_type": item.content_type,
-                "extracted_at": item.extracted_at.isoformat()
-            },
-            data=text_for_embedding
-        )
+            # Create unique vector ID incorporating chunk number
+            vector_id = f"{source_key}_{idx}_{chunk_idx}"
 
-        return vector, None
+            # Create the vector object with chunk metadata
+            vector = Vector(
+                id=vector_id,
+                vector=embeddings,
+                sparse_vector=sparse_vector,
+                metadata={
+                    "title": item.title,
+                    "source_text": item.source_text,
+                    "source_link": item.source_link,
+                    "url": item.url,
+                    "content_type": item.content_type,
+                    "extracted_at": item.extracted_at.isoformat(),
+                    "chunk_index": chunk_idx,
+                    "total_chunks": len(chunks),
+                    "parent_id": f"{source_key}_{idx}"
+                },
+                data=chunk
+            )
+            vectors.append((vector, None))
+
+        return vectors
 
     except Exception as error:
         error_msg = str(error)
         logger.error(f"Error processing item {idx + 1}: {error_msg}")
-        return None, error_msg
+        return [(None, error_msg)]
 
 
 def process_batch(
@@ -220,15 +255,16 @@ def process_batch(
             idx, _, source_key = item
             
             try:
-                vector, error = future.result()
-                if vector:
-                    vectors_to_upsert.append(vector)
-                    successful += 1
-                else:
-                    failed.append({
-                        "id": f"{source_key}_{idx}",
-                        "error": error
-                    })
+                vector_results = future.result()
+                for vector, error in vector_results:
+                    if vector:
+                        vectors_to_upsert.append(vector)
+                        successful += 1
+                    else:
+                        failed.append({
+                            "id": f"{source_key}_{idx}",
+                            "error": error
+                        })
             except Exception as error:
                 failed.append({
                     "id": f"{source_key}_{idx}",
@@ -239,7 +275,12 @@ def process_batch(
     if vectors_to_upsert:
         try:
             logger.info(f"Upserting batch of {len(vectors_to_upsert)} vectors")
-            index.upsert(vectors=vectors_to_upsert)
+            # Process in smaller sub-batches to avoid potential size limits
+            batch_size = 50
+            for i in range(0, len(vectors_to_upsert), batch_size):
+                batch = vectors_to_upsert[i:i + batch_size]
+                index.upsert(vectors=batch)
+                logger.info(f"Upserted sub-batch of {len(batch)} vectors")
         except Exception as error:
             logger.error(f"Batch upsert error: {str(error)}")
             # If batch upsert fails, mark all vectors as failed

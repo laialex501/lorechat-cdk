@@ -23,42 +23,106 @@ LoreChatCDK represents a modern approach to deploying AI-powered chat interfaces
 - Comprehensive monitoring and observability
 
 ## Key Infrastructure Patterns
-1. Separation of concerns through multiple stacks
-2. Secure networking with proper VPC configuration
-3. Containerized deployment with ECS
-4. Integrated monitoring and alerting
-5. Secrets management for API keys
 
-### Performance Targets
+### 1. Service Architecture
 ```mermaid
-graph LR
-    subgraph "Key Metrics"
-        A[Container Startup] --> B[< 30s]
-        C[Auto-scaling] --> D[< 2min]
-        E[Request Latency] --> F[< 3s]
-        G[Availability] --> H[99.9%]
+graph TD
+    subgraph "Edge & Security"
+        CF[CloudFront] --> WAF[WAF Rules]
+        WAF --> ALB[Load Balancer]
+    end
+    
+    subgraph "Real-time Communication"
+        ALB --> WS[WebSocket Layer]
+        WS --> ECS[ECS Service]
+    end
+    
+    subgraph "Data Processing"
+        ECS --> VS[Vector Search]
+        ECS --> LLM[LLM Service]
+    end
+    
+    subgraph "Monitoring"
+        ECS --> CW[CloudWatch]
+        CW --> Metrics[Custom Metrics]
+        CW --> Alarms[Auto-scaling]
     end
 ```
 
-### Scalability Goals
-- Support 1-10 concurrent users initially
-- Scale to 1000s without architecture changes
-- Efficient resource utilization
-- Cost-proportional scaling
+### 2. Core Patterns
+1. Multi-stack separation of concerns
+2. WebSocket-enabled edge architecture
+3. Hybrid search implementation
+4. Factory-based service abstraction
+5. Intelligent auto-scaling
+6. Comprehensive monitoring
+
+### 3. Performance Architecture
+```mermaid
+graph TD
+    subgraph "Performance Optimization"
+        A[Edge Caching] --> B[Response Time]
+        C[Hybrid Search] --> D[Query Accuracy]
+        E[Auto-scaling] --> F[Resource Efficiency]
+        G[WebSockets] --> H[Real-time Updates]
+    end
+    
+    subgraph "Resource Management"
+        I[Spot Instances] --> J[Cost Optimization]
+        K[Public Subnets] --> L[Direct Routing]
+        M[Batch Processing] --> N[Throughput]
+    end
+```
+
+### Scalability Implementation
+- Dynamic resource allocation through ECS auto-scaling
+- Intelligent metric-based scaling decisions
+- Efficient WebSocket connection management
+- Optimized vector search operations
+- Cost-effective infrastructure design
 
 ## Development Philosophy
 
 ### 1. Infrastructure Design
-- Modular stack architecture
-- Factory pattern implementations
-- Secure by default
-- Cost-optimized resources
+```typescript
+// Example: Factory Pattern Implementation
+class LLMServiceFactory {
+  static create(config: LLMConfig): ILLMService {
+    switch (config.provider) {
+      case 'openai':
+        return new OpenAIService(config);
+      case 'anthropic':
+        return new AnthropicService(config);
+      case 'bedrock':
+        return new BedrockService(config);
+      default:
+        throw new Error(`Unsupported provider: ${config.provider}`);
+    }
+  }
+}
+```
 
-### 2. Operational Model
-- Self-healing infrastructure
-- Automated scaling
-- Comprehensive monitoring
-- Proactive cost management
+### 2. Operational Architecture
+```mermaid
+graph TD
+    subgraph "Infrastructure Management"
+        A[CDK Deployment] --> B[Stack Updates]
+        B --> C[Health Checks]
+        C --> D[Monitoring]
+    end
+    
+    subgraph "Auto Recovery"
+        E[Issue Detection] --> F[Auto-scaling]
+        F --> G[Health Restoration]
+        G --> H[Verification]
+    end
+    
+    subgraph "Cost Control"
+        I[Resource Tracking] --> J[Budget Alerts]
+        J --> K[Optimization]
+        K --> L[Adjustment]
+    end
+```
 
 ## Success Metrics
 
@@ -90,12 +154,18 @@ graph LR
 - Vector search integration
 - LLM service abstraction
 
-### Known Limitations
-- Single region deployment
-- Manual production approvals
-- AI debugging challenges
-- WebSocket complexities
-- Limited automated testing for infrastructure
+### Current Capabilities
+- Multi-AZ deployment with WebSocket support
+- Hybrid search implementation
+- Intelligent auto-scaling
+- Comprehensive monitoring
+- Factory-based service abstraction
+
+### Known Considerations
+- Single region deployment (multi-region planned)
+- Advanced monitoring refinement needed
+- Performance optimization opportunities
+- Enhanced testing coverage required
 
 ## Future Roadmap
 
@@ -113,21 +183,38 @@ graph LR
 
 ## Technical Boundaries
 
-### AWS Constraints
-- Service quotas
-- Regional availability
-- Cost structures
-- Feature limitations
+### AWS Service Integration
+```mermaid
+graph TD
+    subgraph "Service Limits"
+        A[ECS Tasks] --> B[Scaling Limits]
+        C[Lambda] --> D[Concurrency]
+        E[CloudFront] --> F[Distribution Limits]
+    end
+    
+    subgraph "Integration Points"
+        G[Vector Store] --> H[Query Limits]
+        I[LLM Services] --> J[Rate Limits]
+        K[WebSockets] --> L[Connection Limits]
+    end
+    
+    subgraph "Resource Constraints"
+        M[Memory] --> N[Task Size]
+        O[CPU] --> P[Processing Power]
+        Q[Network] --> R[Bandwidth]
+    end
+```
 
-### Development Constraints
-- AI agent capabilities
-- Memory bank maintenance
-- Documentation overhead
-- Testing complexity
+### Development Considerations
+- Systematic testing approach
+- Documentation maintenance
+- Performance monitoring
+- Security compliance
+- Cost optimization
 
-### Integration Constraints
-- API rate limits
-- CI/CD pipeline integration
-- Model availability
-- Vector DB scaling
-- Cost considerations
+### Integration Management
+- API quota monitoring
+- Service health tracking
+- Resource optimization
+- Performance tuning
+- Cost analysis

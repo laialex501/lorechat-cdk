@@ -77,49 +77,106 @@ graph TD
     end
 ```
 
-### 2. Request Flow
+### 2. Request Flow & WebSocket Handling
 ```mermaid
 sequenceDiagram
     participant User
-    participant CloudFront
+    participant CF as CloudFront
     participant WAF
-    participant ALB
+    participant ALB as Load Balancer
     participant ECS
     participant Vector
     participant LLM
     
-    User->>CloudFront: WebSocket Connection
-    CloudFront->>WAF: Security Check
-    WAF->>ALB: Route Request
-    ALB->>ECS: Load Balance
-    ECS->>Vector: Context Search
+    Note over User,CF: Connection Phase
+    User->>CF: WebSocket Upgrade Request
+    CF->>WAF: Security Validation
+    WAF->>ALB: Forward Upgrade (Custom Policy)
+    ALB->>ECS: Establish WebSocket
+    
+    Note over User,LLM: Message Processing
+    User->>CF: WebSocket Message
+    CF->>ALB: Route with Session Affinity
+    ALB->>ECS: Process Message
+    
+    Note over ECS,LLM: Context Retrieval
+    ECS->>Vector: Hybrid Search
     Vector-->>ECS: Relevant Context
+    
+    Note over ECS,LLM: Response Generation
     ECS->>LLM: Generate Response
-    LLM-->>ECS: Response
+    LLM-->>ECS: Stream Response
     ECS-->>User: Stream Response
 ```
 
-### 3. Data Processing Pipeline
+**WebSocket Configuration Pattern:**
+```typescript
+// CloudFront WebSocket behavior
+const webSocketBehavior = new cloudfront.BehaviorOptions({
+  allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+  originRequestPolicy: new cloudfront.OriginRequestPolicy(this, 'WebSocketPolicy', {
+    headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
+      'Sec-WebSocket-Key',
+      'Sec-WebSocket-Version',
+      'Sec-WebSocket-Protocol',
+      'Sec-WebSocket-Accept'
+    ),
+    queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all()
+  })
+});
+```
+
+### 3. Enhanced Data Processing Pipeline
 ```mermaid
-graph LR
-    subgraph "Data Processing"
-        S1[Source S3] --> L1[Processing Lambda]
-        L1 --> |JSONL| S2[Processed S3]
-        S2 --> L2[Vectorization Lambda]
-        L2 --> |Vectors + Metadata| VS[Upstash Vector]
+graph TD
+    subgraph "Content Processing"
+        A[Raw Content] --> B[HTML Extraction]
+        B --> C[Content Cleaning]
+        C --> D[Markdown Conversion]
     end
+    
+    subgraph "Chunking Strategy"
+        D --> E[Semantic Splitting]
+        E --> F[Overlap Calculation]
+        F --> G[Metadata Enrichment]
+    end
+    
+    subgraph "Vector Generation"
+        G --> H[Batch Processing]
+        H --> I[Embedding Creation]
+        I --> J[Vector Storage]
+    end
+    
+    subgraph "Optimization"
+        K[Batch Size Tuning]
+        L[Concurrent Processing]
+        M[Error Recovery]
+    end
+```
 
-    subgraph "Processing Lambda"
-        HTML[HTML Content] --> Extract[Extract Content]
-        Extract --> |title, source, url...| Convert[Convert to Markdown]
-        Convert --> JSONL[JSONL Output]
-    end
-
-    subgraph "Vectorization Lambda"
-        JI[JSONL Input] --> Parse[Parse Items]
-        Parse --> Embed[Generate Embeddings]
-        Embed --> Store[Store with Metadata]
-    end
+**Processing Implementation:**
+```typescript
+// Optimized processing pipeline
+class ContentProcessor {
+  async process(content: string): Promise<ProcessedContent> {
+    // Semantic splitting with overlap
+    const chunks = await this.splitContent(content, {
+      chunkSize: 1000,
+      overlap: 100,
+      preserveStructure: true
+    });
+    
+    // Parallel processing with batching
+    const batchSize = 50;
+    const batches = this.createBatches(chunks, batchSize);
+    
+    const results = await Promise.all(
+      batches.map(batch => this.processBatch(batch))
+    );
+    
+    return this.assembleResults(results);
+  }
+}
 ```
 
 #### Pipeline Components
@@ -195,23 +252,79 @@ graph LR
 - Comprehensive monitoring and logging
 - Cost-effective resource utilization
 
-### 4. Resource Management
-- Auto-scaling based on demand
-- Spot instances for cost optimization
-- CloudFront caching for performance
-- Efficient vector storage solution
-- Modular stack deployment
+### 4. Auto-scaling Strategy
+```mermaid
+graph TD
+    subgraph "Metrics Collection"
+        A[CPU Utilization] --> D[Scaling Decision]
+        B[Memory Usage] --> D
+        C[Request Count] --> D
+    end
+    
+    subgraph "Scaling Logic"
+        D --> E{Scale Out?}
+        E -->|Yes| F[Increase Capacity]
+        E -->|No| G{Scale In?}
+        G -->|Yes| H[Decrease Capacity]
+        G -->|No| I[Maintain Current]
+    end
+    
+    subgraph "Optimization"
+        F --> J[Spot Instance Request]
+        H --> K[Grace Period Check]
+    end
+```
+
+**Auto-scaling Configuration:**
+```typescript
+// Advanced auto-scaling setup
+const scaling = service.autoScaleTaskCount({
+  maxCapacity: 4,
+  minCapacity: 1
+});
+
+// CPU-based scaling
+scaling.scaleOnCpuUtilization('CpuScaling', {
+  targetUtilizationPercent: 70,
+  scaleInCooldown: Duration.seconds(60),
+  scaleOutCooldown: Duration.seconds(30)
+});
+
+// Request count scaling
+scaling.scaleOnRequestCount('RequestScaling', {
+  targetRequestsPerSecond: 100,
+  scaleInCooldown: Duration.seconds(60),
+  scaleOutCooldown: Duration.seconds(30)
+});
+```
 
 ## Operational Patterns
 
-### 1. Monitoring Strategy
+### 1. Enhanced Monitoring Strategy
 ```mermaid
 graph TD
-    subgraph "Monitoring"
+    subgraph "Performance Monitoring"
         CW[CloudWatch] --> Dash[Dashboards]
         CW --> Logs[Log Groups]
-        CW --> Alarms[Budget Alarms]
-        Alarms --> Not[Notifications]
+        CW --> Met[Custom Metrics]
+    end
+    
+    subgraph "Cost Tracking"
+        Met --> Cost[Cost Explorer]
+        Cost --> BA[Budget Alarms]
+        BA --> Not[Notifications]
+    end
+    
+    subgraph "Health Checks"
+        CW --> HC[Health Checks]
+        HC --> AL[ALB Targets]
+        HC --> Task[ECS Tasks]
+    end
+    
+    subgraph "Logging"
+        Logs --> Cont[Container Logs]
+        Logs --> App[Application Logs]
+        Logs --> Acc[Access Logs]
     end
 ```
 
