@@ -165,34 +165,25 @@ def create_chat_service():
 ```
 
 **LLM Integration:**
-```typescript
-// Factory pattern for service abstraction
-const llmService = LlmFactory.create({
-  provider: config.LLM_PROVIDER,
-  model: config.LLM_MODEL,
-  apiKey: process.env.LLM_API_KEY
-});
+```python
 
-// Provider-agnostic interface
-const response = await llmService.generateResponse(prompt);
+# Factory pattern for service abstraction
+llm_service = LLMFactory.create_llm_service(
+    provider=LLMProvider.Anthropic,
+    model_name=ClaudeModel.SONNET3_5_HAIKU
+)
+
+# Provider-agnostic interface
+prompt = "Hello world"
+response = llmService.generate_response(prompt)
 ```
 
 **Vector Store Integration:**
 ```python
-// Abstract factory for vector stores
-class VectorStoreFactory:
-    """Factory class for vector store service."""
-
-    @staticmethod
-    def get_vector_store() -> BaseVectorStoreService:
-        """Factory function to get vector store service."""
-        logger.info("Initializing vector store...")
-        if settings.VECTOR_STORE_PROVIDER == VectorStoreProvider.UPSTASH:
-            return UpstashService()
-        elif settings.VECTOR_STORE_PROVIDER == VectorStoreProvider.OPENSEARCH:
-            return OpenSearchService()
-        else:
-            return FAISSService()
+# Abstract factory for vector stores
+vector_store = VectorStoreFactory.get_vector_store()
+query = "Hello world"
+documents = vector_store.similarity_search(query, k=3)
 ```
 
 **Benefits:**
