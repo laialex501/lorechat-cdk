@@ -1,0 +1,74 @@
+name: Deploy CDK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Enable manual triggers
+  repository_dispatch:
+    types: [update-ecs]  # Enable container repo triggers, this is defined in lorechat-container/build-push.yaml
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read    # Required to checkout code
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout CDK repo
+        uses: actions/checkout@v4
+        with:
+          path: LoreChatCDK
+
+      # The CDK is setup to look for the ECS container image in ./LoreChatContainer
+      - name: Checkout Container Repo
+        uses: actions/checkout@v4
+        with:
+          repository: laialex501/lorechat-container
+          token: ${{ secrets.PAT_TOKEN }}
+          path: LoreChatContainer
+
+      - name: Debug directory structure
+        run: |
+          pwd
+          ls -la
+          ls -la LoreChatCDK
+          ls -la LoreChatContainer
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::030238084238:role/github-oidc
+          aws-region: us-east-1
+
+      # Note the working-directory for all CDK-related commands
+      - name: Install dependencies
+        working-directory: LoreChatCDK
+        run: npm ci
+
+      - name: Install CDK
+        run: npm install -g aws-cdk
+
+      - name: Build
+        working-directory: LoreChatCDK
+        run: npm run build
+
+      - name: CDK Synth
+        working-directory: LoreChatCDK
+        run: cdk synth
+
+      - name: Deploy CDK
+        working-directory: LoreChatCDK
+        env:
+          IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+        run: npx cdk deploy --all --require-approval never

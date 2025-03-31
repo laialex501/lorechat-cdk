@@ -1,25 +1,17 @@
 {
-  "availability-zones:account=298142463304:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
-  ],
-  "availability-zones:account=135808919683:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
-  ],
-  "hosted-zone:account=135808919683:domainName=laialx.people.amazon.dev:region=us-east-1": {
-    "Id": "/hostedzone/Z05678692AF0PKVYTT1M1",
-    "Name": "laialx.people.amazon.dev."
-  },
   "acknowledged-issue-numbers": [
     32775
-  ]
+  ],
+  "availability-zones:account=030238084238:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "hosted-zone:account=030238084238:domainName=lorechat.dev:region=us-east-1": {
+    "Id": "/hostedzone/Z00711263HOXVP1EKB0ZO",
+    "Name": "lorechat.dev."
+  }
 }
