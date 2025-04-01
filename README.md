@@ -21,7 +21,7 @@ Welcome to my GenAI portfolio project. This project implements a production-read
 - 🔄 **Intelligent Auto-scaling** - ECS Fargate with spot instance optimization
 - 📊 **Comprehensive Monitoring** - Custom CloudWatch dashboards and budget tracking
 
-## System Architecture: A Study in Cloud Design 🏗️
+## System Architecture 🏗️
 
 ```mermaid
 graph TD
@@ -60,7 +60,7 @@ graph TD
     L --> F
 ```
 
-### Design Philosophy
+### Separation of Concerns
 
 Each stack represents a distinct responsibility domain:
 
@@ -95,12 +95,13 @@ Each stack represents a distinct responsibility domain:
 | **Security Architecture** | CloudFront + WAF + Public Subnets | - Edge protection with DDoS mitigation<br>- WebSocket support for real-time features<br>- Optimized network cost through public subnet design |
 | **Service Integration** | Factory Pattern | - Provider-agnostic interfaces<br>- Runtime service switching<br>- Simplified vendor migrations |
 
-## Technical Deep Dives: Engineering Challenges & Solutions 🔬
+## Technical Deep Dives & Implementation Details 🔬
 
-### Infrastructure Design Evolution
+### Infrastructure Design
 
 <details>
-<summary>💡 <b>AWS CDK Architecture</b> - Strategic Implementation Decisions</summary>
+<summary>💡 <b>AWS CDK Architecture</b> - Infrastructure as Code & Design</summary>
+### AWS CDK Architecture - Infrastructure as Code & Design
 
 The choice of AWS CDK with TypeScript emerged from careful consideration of infrastructure management approaches:
 
@@ -124,13 +125,23 @@ The choice of AWS CDK with TypeScript emerged from careful consideration of infr
 
 <details>
 <summary>🌐 <b>Network Architecture</b> - Optimized Multi-AZ Design</summary>
+### Network Architecture - Optimzied Multi-AZ Design
 
-The networking architecture demonstrates strategic problem-solving in cloud design:
+```mermaid
+graph LR
+    A[CloudFront] --> B[WAF]
+    B --> C[ALB]
+    C --> D[ECS Tasks]
+    D --> E[Internet Gateway]
+    E --> F[External APIs]
+```
 
 **Initial Challenge:**
 - Need for multi-AZ reliability
+- Require external API access
 - WebSocket support requirement
 - Cost optimization goals
+- Security and throttling goals
 
 **Solution Evolution:**
 1. Started with API Gateway approach
@@ -146,7 +157,8 @@ The networking architecture demonstrates strategic problem-solving in cloud desi
 </details>
 
 <details>
-<summary>⚡ <b>Service Integration</b> - Factory Pattern Implementation</summary>
+<summary>🔨 <b>Service Integration</b> - Factory Pattern Implementation</summary>
+### Service Integrations - Factory Pattern Implementation
 
 The service layer showcases software engineering design patterns:
 
@@ -193,49 +205,9 @@ documents = vector_store.similarity_search(query, k=3)
 - Consistent interfaces
 </details>
 
-### Innovative Solutions
-
-#### 1. Optimized Network Architecture
-```mermaid
-graph LR
-    A[CloudFront] --> B[WAF]
-    B --> C[ALB]
-    C --> D[ECS Tasks]
-    D --> E[Internet Gateway]
-    E --> F[External APIs]
-```
-
-This design achieves:
-- Multi-AZ reliability
-- Direct API access
-- Enhanced security
-- WebSocket support
-
-#### 2. Intelligent Auto-scaling
-```typescript
-// ECS Service auto-scaling configuration
-const service = new ecs.FargateService(this, 'Service', {
-  cluster,
-  taskDefinition,
-  capacityProviderStrategies: [{
-    capacityProvider: 'FARGATE_SPOT',
-    weight: 1
-  }],
-  minHealthyPercent: 50,
-  maxHealthyPercent: 200
-});
-
-// Auto-scaling based on CPU utilization
-const scaling = service.autoScaleTaskCount({
-  minCapacity: 1,
-  maxCapacity: 4
-});
-```
-
-
-## Technical Deep Dives & Implementation Details 🔬
-
-### WebSocket Evolution & Real-time Communication
+<details>
+<summary>🌐 <b>Websocket Connections</b> - Real-time Communication</summary>
+### WebSocket Connections - Real-time Communication
 
 ```mermaid
 sequenceDiagram
@@ -284,8 +256,11 @@ const webSocketBehavior = new cloudfront.BehaviorOptions({
   })
 });
 ```
+</details>
 
-### Hybrid Search Implementation
+<details>
+<summary>🔍 <b>Hybrid Search Implementation</b> - Vector Search Flow</summary>
+### Hybrid Search Implementation - Vector Search Flow
 
 ```mermaid
 graph TD
@@ -307,8 +282,35 @@ graph TD
         H --> I[Final Results]
     end
 ```
+</details>
 
+<details>
+<summary>⚖️ <b>Intelligent Auto-scaling Strategy</b></summary>
 ### Intelligent Auto-scaling Strategy
+
+Our auto scaling strategy allows us to scale up during cloud deployments, when resource usage is high, or when there is a large number of requests.
+
+I chose small defaults for demonstration purposes, but these can easily be configured in production.
+
+```typescript
+// ECS Service auto-scaling configuration
+const service = new ecs.FargateService(this, 'Service', {
+  cluster,
+  taskDefinition,
+  capacityProviderStrategies: [{
+    capacityProvider: 'FARGATE_SPOT',
+    weight: 1
+  }],
+  minHealthyPercent: 50,
+  maxHealthyPercent: 200
+});
+
+// Auto-scaling based on CPU utilization
+const scaling = service.autoScaleTaskCount({
+  minCapacity: 1,
+  maxCapacity: 4
+});
+```
 
 ```mermaid
 graph TD
@@ -354,7 +356,10 @@ scaling.scaleOnRequestCount('RequestScaling', {
   scaleOutCooldown: Duration.seconds(30)
 });
 ```
+</details>
 
+<details>
+<summary>📦 <b>Data Processing Pipeline</b> - Vectorization</summary>
 ### Data Processing Pipeline
 
 ```mermaid
@@ -364,9 +369,14 @@ graph TD
         B --> C[Content Cleaning]
         C --> D[Markdown Conversion]
     end
+
+    subgraph "Batch Processing"
+        D --> K[Batching]
+        K --> L[Parallel Processing]
+    end
     
     subgraph "Chunking Strategy"
-        D --> E[Semantic Splitting]
+        L --> E[Semantic Splitting]
         E --> F[Overlap Calculation]
         F --> G[Metadata Enrichment]
     end
@@ -376,26 +386,10 @@ graph TD
         H --> I[Embedding Creation]
         I --> J[Vector Storage]
     end
-    
-    subgraph "Optimization"
-        K[Batch Size Tuning]
-        L[Concurrent Processing]
-        M[Error Recovery]
-    end
 ```
+</details>
 
 ## Development Methodology & Innovation 🛠️
-
-### Systematic Approach to Cloud Architecture
-
-```mermaid
-graph TD
-    A[Problem Analysis] --> B[Architecture Design]
-    B --> C[Implementation]
-    C --> D[Testing & Validation]
-    D --> E[Documentation]
-    E --> A
-```
 
 ### Key Development Patterns
 
@@ -418,6 +412,24 @@ graph TD
    - Custom CloudWatch metrics
    - Budget tracking
    - Resource optimization
+
+### Cost Optimization
+ 
+- Utilizes Fargate Spot instances
+- Free tier eligible resources where possible
+- Auto-scaling based on demand (1-4 instances)
+- CloudFront caching to reduce origin requests
+- Short log retention periods (1 week)
+- Dual AZ deployment for availability
+
+### Security
+ 
+- Least privilege IAM policies
+- Implement proper network isolation
+- Security groups limited to CloudFront IPs
+- WAF configuration with rate limiting
+- SSL/TLS encryption for all traffic
+- Secrets Manager for secure credential storage
 
 ## Future Enhancements 🔮
 
