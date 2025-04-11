@@ -492,6 +492,41 @@ Our Cloudflare integration provides multiple layers of protection:
 
 This multi-layered approach ensures robust protection while maintaining performance and real-time capabilities.
 
+### Why Cloudflare Over CloudFront
+
+Our infrastructure evolved from API Gateway to CloudFront before finally settling on Cloudflare for several compelling reasons:
+
+1. **Superior Bot Protection**
+   - Bot Fight Mode with automated CAPTCHA challenges for suspicious traffic
+   - "I'm Under Attack Mode" for enhanced protection during targeted attacks
+   - Advanced bot detection that reduces costs by preventing unnecessary LLM calls
+
+2. **Simplified Rule Management**
+   - Intuitive dashboard for creating and managing security rules
+   - Flexible WAF rule configuration without complex CloudFormation templates
+   - Page Rules for URL-specific behaviors and optimizations
+   - Rate limiting rules with fine-grained control
+
+3. **Streamlined WebSocket Support**
+   - Native WebSocket protocol support with minimal configuration
+   - Session affinity for stable real-time connections
+   - Simplified handling of streaming responses from LLMs
+   - Lower latency for real-time chat interactions
+
+4. **Cost Efficiency**
+   - Generous free tier for development and smaller deployments
+   - Predictable pricing model
+   - No charges for request handling (unlike CloudFront)
+   - Reduced operational costs for similar performance characteristics
+
+5. **Additional Benefits**
+   - Integrated DNS management with automatic HTTPS
+   - More global points of presence for lower latency
+   - CIDR aggregation to handle AWS security group rule limits
+   - Weekly automated security group updates via Lambda
+   - Simplified SSL/TLS certificate management
+   - Enhanced caching controls for static assets
+
 ## Future Enhancements 🔮
 
 Planned architectural improvements:
@@ -513,6 +548,6 @@ Planned architectural improvements:
 
 ## Connect & Contribute 🤝
 
-[GitHub](https://github.com/laialex501) | [LinkedIn](https://linkedin.com/in/laialex501)
+[GitHub](https://github.com/laialex501) | [LinkedIn](https://www.linkedin.com/in/alexhlai)
 
 Licensed under MIT - See [LICENSE](LICENSE) for details
