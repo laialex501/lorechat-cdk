@@ -166,7 +166,6 @@ graph LR
 
 <details>
 <summary>🔨 <b>Service Integration</b> - Factory Pattern Implementation</summary>
-### Service Integrations - Factory Pattern Implementation
 
 The service layer showcases software engineering design patterns:
 
@@ -215,7 +214,6 @@ documents = vector_store.similarity_search(query, k=3)
 
 <details>
 <summary>🌐 <b>Websocket Connections</b> - Real-time Communication</summary>
-### WebSocket Connections - Real-time Communication
 
 ```mermaid
 sequenceDiagram
@@ -257,7 +255,6 @@ Initially implemented with API Gateway, but encountered limitations:
 
 <details>
 <summary>🔍 <b>Hybrid Search Implementation</b> - Vector Search Flow</summary>
-### Hybrid Search Implementation - Vector Search Flow
 
 ```mermaid
 graph TD
@@ -283,7 +280,6 @@ graph TD
 
 <details>
 <summary>⚖️ <b>Intelligent Auto-scaling Strategy</b></summary>
-### Intelligent Auto-scaling Strategy
 
 Our auto scaling strategy allows us to scale up during cloud deployments, when resource usage is high, or when there is a large number of requests.
 
@@ -357,7 +353,6 @@ scaling.scaleOnRequestCount('RequestScaling', {
 
 <details>
 <summary>📦 <b>Data Processing Pipeline</b> - Vectorization</summary>
-### Data Processing Pipeline
 
 ```mermaid
 graph TD
@@ -427,6 +422,75 @@ graph TD
 - Cloudflare WAF with Bot Fight Mode and rate limiting
 - SSL/TLS encryption for all traffic (Full Strict mode)
 - Secrets Manager for secure credential storage
+
+## CI/CD Pipeline & Deployment Flow 🚀
+
+```mermaid
+graph TD
+    A[Push to Container Repo] --> B[Build Container]
+    B --> C[Repository Dispatch Event]
+    C --> D[Trigger CDK Workflow]
+    D --> E[Deploy Infrastructure]
+    E --> F[Update ECS Service]
+    
+    G[Push to CDK Repo] --> D
+    H[Manual Trigger] --> D
+```
+
+Our CI/CD pipeline uses GitHub Actions to create a seamless deployment flow:
+
+1. **Container Updates**
+   - Push to the container repo builds a new image
+   - GitHub Actions sends a repository dispatch event to the CDK repo
+   - The image tag is passed as a client payload
+
+2. **Infrastructure Updates**
+   - Push to the CDK repo triggers deployment
+   - Manual triggers are available for controlled deployments
+   - OIDC authentication ensures secure AWS access
+
+3. **Deployment Process**
+   - AWS CDK handles infrastructure changes
+   - ECS service updates with new container images
+   - Zero-downtime deployments with rolling updates
+
+This workflow ensures that both application and infrastructure changes deploy smoothly and securely.
+
+## Cloudflare Integration & Security 🛡️
+
+```mermaid
+graph TD
+    A[User] --> B[Cloudflare DNS]
+    B --> C[Cloudflare CDN]
+    C --> D[Cloudflare WAF]
+    D --> E[Application Load Balancer]
+    E --> F[ECS Service]
+    
+    G[Cloudflare IP Updater] -.-> H[Security Groups]
+    G -.-> I[Weekly Updates]
+```
+
+Our Cloudflare integration provides multiple layers of protection:
+
+1. **Edge Security**
+   - DDoS protection at the network edge
+   - Bot Fight Mode with automated CAPTCHA
+   - Rate limiting to prevent abuse
+   - WAF rules to block common attacks
+
+2. **Secure Communication**
+   - Full Strict SSL/TLS mode
+   - End-to-end encryption
+   - WebSocket support for real-time features
+   - Session affinity for stable connections
+
+3. **Automated Security Updates**
+   - Weekly Lambda function updates security groups
+   - CIDR aggregation handles AWS rule limits
+   - Only traffic from Cloudflare IPs reaches ALB
+   - Automatic adaptation to Cloudflare network changes
+
+This multi-layered approach ensures robust protection while maintaining performance and real-time capabilities.
 
 ## Future Enhancements 🔮
 

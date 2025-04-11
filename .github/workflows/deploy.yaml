@@ -18,13 +18,15 @@ jobs:
       - name: Checkout CDK repo
         uses: actions/checkout@v4
         with:
+          repository: laialex501/lorechat-cdk # Update with your repository path instead
+          token: ${{ secrets.PAT_TOKEN }}
           path: LoreChatCDK
 
       # The CDK is setup to look for the ECS container image in ./LoreChatContainer
       - name: Checkout Container Repo
         uses: actions/checkout@v4
         with:
-          repository: laialex501/lorechat-container
+          repository: laialex501/lorechat-container # Update with your repository path instead
           token: ${{ secrets.PAT_TOKEN }}
           path: LoreChatContainer
 
@@ -48,7 +50,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::030238084238:role/github-oidc
+          role-to-assume: arn:aws:iam::030238084238:role/github-oidc  # Update with your role
           aws-region: us-east-1
 
       # Note the working-directory for all CDK-related commands
