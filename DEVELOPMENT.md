@@ -105,10 +105,58 @@ export USE_FINCH=true
 finch build -t lorechat-cdk .
 ```
 
+## Cloudflare Configuration
+
+After deploying the infrastructure with CDK, you need to configure Cloudflare to point to your ALB:
+
+### 1. DNS Configuration
+- Log in to your Cloudflare account
+- Select the domain (ex: `lorechat.dev`)
+- Go to DNS settings
+- Add a CNAME record:
+  - Type: CNAME
+  - Name: `dev-chat` (or your subdomain)
+    - Cloudflare only supports SSL origin validation on free tier for subdomains one-level deep
+    - So `dev-chat` would work but `dev.chat` would have validation errors and users would not be able to access your site
+  - Target: Your ALB DNS name (available in CDK outputs)
+  - Proxy status: Proxied (orange cloud), this means ALB will see requests as originating from Cloudflare IP address
+- You may need to manually run the Cloudfront IP updater Lambda
+  - Use any test message type, no inputs are required
+  - This will update your ALB security group to accept requests from Cloudflare IP addresses
+  - IMPORTANT: If you do not do this, then ALB will reject requests proxied through Cloudflare
+
+### 2. SSL/TLS Configuration
+- Go to SSL/TLS → Overview
+- Set SSL/TLS encryption mode to "Full Strict"
+- This ensures traffic between Cloudflare and your ALB is encrypted using your ACM certificate
+
+### 3. Enable WebSockets
+- Go to Network → WebSockets
+- Ensure WebSockets are enabled
+
+### 4. Security Configuration
+- Go to Security → WAF
+- Configure appropriate security rules:
+  - Enable Bot Fight Mode for automated CAPTCHA
+  - Go to Settings and enable "I'm under attack mode" to verify human visitors (helps reduce costs as we are exposing LLMs)
+  - Set rate limiting rules
+    - Tune based on use case, as initiating websocket and retrieving static assets are all separate requests, one connection requires many requests
+    - Rate limiting 100/minute is a good starting point for 1 user at a time
+  - Configure additional security features as needed
+
+### 5. Caching Configuration
+- Go to Caching → Configuration
+- Set appropriate caching rules for static assets
+- Configure browser cache TTL settings
+
+### 6. Page Rules (Optional)
+- Create page rules for specific URL patterns if needed
+- Configure cache behavior, security level, etc.
+
 ## Monitoring and Troubleshooting
 
 ### CloudWatch Logs
-- Check Lambda function logs
+- Check Lambda function logs (including Cloudflare IP updater)
 - Review ECS service logs
 - Monitor CloudWatch dashboards
 
@@ -117,6 +165,7 @@ finch build -t lorechat-cdk .
 - Check security group configurations
 - Validate IAM roles and permissions
 - Review VPC and subnet settings
+- Verify Cloudflare IP ranges are being updated correctly
 
 ## Continuous Integration
 

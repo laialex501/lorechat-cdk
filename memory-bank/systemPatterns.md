@@ -6,56 +6,56 @@
 ```mermaid
 graph TD
     subgraph "Infrastructure Stack"
-        A[CloudFront] --> B[WAF]
-        B --> C[Application Load Balancer]
-        E[Route 53] --> A
-        S[Secrets Manager]
-        D[VPC]
-        Q[IAM Roles]
-        R[Security Groups]
+        A[Cloudflare DNS] --> B[Cloudflare CDN]
+        B --> C[Cloudflare WAF]
+        C --> D[Application Load Balancer]
+        E[VPC]
+        F[Cloudflare IP Updater] -.-> G[Security Groups]
+        H[Secrets Manager]
+        I[IAM Roles]
     end
 
     subgraph "Service Stack"
-        C --> F[ECS Fargate Service]
-        F --> G[Container: LoreChat App]
-        O[LLM Service Factory]
+        D --> J[ECS Fargate Service]
+        J --> K[Container: LoreChat App]
+        L[LLM Service Factory]
     end
 
     subgraph "Data Stack"
-        H[S3 Source Bucket]
-        I[S3 Processed Bucket]
-        J[Data Processing Lambda]
-        K[Vectorization Lambda]
-        H --> J
-        J --> I
-        I --> K
+        M[S3 Source Bucket]
+        N[S3 Processed Bucket]
+        O[Data Processing Lambda]
+        P[Vectorization Lambda]
+        M --> O
+        O --> N
+        N --> P
     end
 
     subgraph "Monitoring Stack"
-        M[CloudWatch Dashboards]
-        W[Cloudwatch Logs]
-        N[Budget Alarms]
+        Q[CloudWatch Dashboards]
+        R[Cloudwatch Logs]
+        S[Budget Alarms]
     end
 
     subgraph "External Integrations"
-        L[Upstash Vector]
-        P[OpenAI]
-        K --> L
-        O --> P[OpenAI]
+        T[Upstash Vector]
+        U[OpenAI]
+        P --> T
+        L --> U[OpenAI]
     end
 
     subgraph "AWS Bedrock"
-        T[Claude]
-        U[Deepseek]
-        V[Nova]
-        O --> T
-        O --> U
-        O --> V
+        V[Claude]
+        W[Deepseek]
+        X[Nova]
+        L --> V
+        L --> W
+        L --> X
     end
 
-    F --> O
-    L --> F
-    S --> F
+    J --> L
+    T --> J
+    H --> J
 ```
 
 ## Core Design Patterns
@@ -81,8 +81,7 @@ graph TD
 ```mermaid
 sequenceDiagram
     participant User
-    participant CF as CloudFront
-    participant WAF
+    participant CF as Cloudflare
     participant ALB as Load Balancer
     participant ECS
     participant Vector
@@ -90,8 +89,7 @@ sequenceDiagram
     
     Note over User,CF: Connection Phase
     User->>CF: WebSocket Upgrade Request
-    CF->>WAF: Security Validation
-    WAF->>ALB: Forward Upgrade (Custom Policy)
+    CF->>ALB: Forward Upgrade
     ALB->>ECS: Establish WebSocket
     
     Note over User,LLM: Message Processing
@@ -109,22 +107,8 @@ sequenceDiagram
     ECS-->>User: Stream Response
 ```
 
-**WebSocket Configuration Pattern:**
-```typescript
-// CloudFront WebSocket behavior
-const webSocketBehavior = new cloudfront.BehaviorOptions({
-  allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-  originRequestPolicy: new cloudfront.OriginRequestPolicy(this, 'WebSocketPolicy', {
-    headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
-      'Sec-WebSocket-Key',
-      'Sec-WebSocket-Version',
-      'Sec-WebSocket-Protocol',
-      'Sec-WebSocket-Accept'
-    ),
-    queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all()
-  })
-});
-```
+**Cloudflare WebSocket Configuration:**
+WebSocket support is enabled through the Cloudflare dashboard under Network → WebSockets.
 
 ### 3. Enhanced Data Processing Pipeline
 ```mermaid
@@ -217,13 +201,84 @@ class ContentProcessor {
 ```mermaid
 graph TD
     subgraph "Security Layers"
-        CF[CloudFront] --> WAF
+        CF[Cloudflare DNS] --> CDN[Cloudflare CDN]
+        CDN --> WAF[Cloudflare WAF]
         WAF --> ALB[Load Balancer]
         ALB --> SG[Security Groups]
         SG --> ECS[ECS Service]
         SM[Secrets Manager] -.-> ECS
         IAM[IAM Roles] -.-> ECS
+        CIU[Cloudflare IP Updater] -.-> SG
     end
+```
+
+### 5. Cloudflare IP Updater Pattern with CIDR Aggregation
+```mermaid
+graph TD
+    subgraph "IP Range Management"
+        A[EventBridge Rule] -->|Weekly Trigger| B[Lambda Function]
+        B -->|Fetch IP Ranges| C[Cloudflare API]
+        C -->|Return IP Ranges| B
+        B -->|Aggregate CIDRs| H[CIDR Aggregation]
+        H -->|Reduced IP Set| I[Batch Processing]
+        I -->|Update Rules| D[Security Group]
+    end
+    
+    subgraph "Security Group Rules"
+        D -->|Allow| E[Cloudflare IPs]
+        D -->|Allow| F[VPC Traffic]
+        D -->|Deny| G[All Other Traffic]
+    end
+```
+
+**Cloudflare IP Updater Implementation:**
+```typescript
+// Lambda function to update security group with Cloudflare IP ranges
+export class CloudflareIpUpdater extends Construct {
+  constructor(scope: Construct, id: string, props: CloudflareIpUpdaterProps) {
+    super(scope, id);
+    
+    // Create Lambda function
+    const updaterFunction = new lambda.Function(
+      this,
+      "CloudflareIpUpdaterFunction",
+      {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        handler: "index.handler",
+        code: lambda.Code.fromAsset(
+          path.join(__dirname, "../../lambda/cloudflare_ip_updater")
+        ),
+        timeout: cdk.Duration.minutes(5),
+        environment: {
+          SECURITY_GROUP_ID: props.securityGroup.securityGroupId,
+          PORTS: props.ports.join(","),
+        },
+      }
+    );
+    
+    // Schedule weekly updates
+    new events.Rule(this, "ScheduleRule", {
+      schedule: events.Schedule.rate(cdk.Duration.days(7)),
+      targets: [new targets.LambdaFunction(updaterFunction)],
+    });
+  }
+}
+```
+
+**CIDR Aggregation Implementation:**
+```javascript
+// Lambda function with CIDR aggregation to stay under AWS limits
+const { aggregate } = require('cidr-tools');
+
+// Aggregate the new CIDR ranges to reduce the number of rules
+const aggregatedRanges = aggregate(newRanges);
+console.log(`Aggregated ${newRanges.length} Cloudflare IP ranges into ${aggregatedRanges.length} CIDR blocks`);
+
+// Process in batches to stay under AWS limits
+for (let i = 0; i < cidrsToAdd.length; i += MAX_RULES_PER_BATCH) {
+  const batchCidrs = cidrsToAdd.slice(i, i + MAX_RULES_PER_BATCH);
+  // Update security group with batch
+}
 ```
 
 ## Implementation Patterns
@@ -336,11 +391,11 @@ graph TD
 - Cache optimization
 
 ### 3. Security Implementation
-- WAF rules and rate limiting
-- Security group restrictions
+- Cloudflare WAF with Bot Fight Mode
+- Automated security group updates with Cloudflare IP ranges
 - IAM least privilege
 - Secrets management
-- Encryption at rest and in transit
+- Encryption at rest and in transit (Full Strict SSL/TLS mode)
 
 ### 4. Development Practices
 - Memory bank documentation

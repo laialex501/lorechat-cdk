@@ -15,7 +15,7 @@ Welcome to my GenAI portfolio project. This project implements a production-read
 ## Technical Highlights 💫
 
 - 🏗️ **Modular Stack Architecture** - Separate infrastructure, service, data, and monitoring stacks
-- 🔐 **Security-First Design** - CloudFront + WAF architecture with least-privilege IAM
+- 🔐 **Security-First Design** - Cloudflare WAF + CDN architecture with least-privilege IAM
 - 🎭 **Provider-Agnostic AI** - Abstract interfaces for LLM and vector store services. Supports GPT, Claude, and Deepseek.
 - 🐳 **Container-Ready** - Deploy consistently across environments
 - 🔄 **Intelligent Auto-scaling** - ECS Fargate with spot instance optimization
@@ -26,38 +26,40 @@ Welcome to my GenAI portfolio project. This project implements a production-read
 ```mermaid
 graph TD
     subgraph "Infrastructure Stack (Security & Networking)"
-        A[CloudFront] --> B[WAF]
-        B --> C[Application Load Balancer]
-        E[Route 53] --> A
-        D[VPC with Public Subnets]
+        A[Cloudflare DNS] --> B[Cloudflare CDN]
+        B --> C[Cloudflare WAF]
+        C --> D[Application Load Balancer]
+        E[VPC with Public Subnets]
+        F[Cloudflare IP Updater]
+        F -.-> G[Security Groups]
     end
 
     subgraph "Service Stack (Compute & Integration)"
-        C --> F[ECS Fargate Service]
-        F --> G[Container: LoreChat App]
-        O[LLM Service Factory]
+        D --> H[ECS Fargate Service]
+        H --> I[Container: LoreChat App]
+        J[LLM Service Factory]
     end
 
     subgraph "Data Stack (Processing & Storage)"
-        H[S3 Source Bucket]
-        J[Data Processing Lambda]
-        K[Vectorization Lambda]
-        H --> J --> K
+        K[S3 Source Bucket]
+        L[Data Processing Lambda]
+        M[Vectorization Lambda]
+        K --> L --> M
     end
 
     subgraph "Monitoring Stack (Observability)"
-        M[CloudWatch Dashboards]
-        N[Budget Alarms]
+        N[CloudWatch Dashboards]
+        O[Budget Alarms]
     end
 
     subgraph "External Services"
-        L[Vector Store]
-        P[LLM Providers]
+        P[Vector Store]
+        Q[LLM Providers]
     end
 
-    K --> L
-    F --> O --> P
-    L --> F
+    M --> P
+    H --> J --> Q
+    P --> H
 ```
 
 ### Separation of Concerns
@@ -66,8 +68,9 @@ Each stack represents a distinct responsibility domain:
 
 1. 🛡️ **Infrastructure Stack**
    - Network isolation with public subnet optimization
-   - Edge security through CloudFront + WAF
-   - DNS and SSL/TLS management
+   - Edge security through Cloudflare CDN + WAF
+   - DNS and SSL/TLS management with Cloudflare
+   - Automatic security group updates with Cloudflare IP ranges
 
 2. 🚢 **Service Stack**
    - Container orchestration with ECS Fargate
@@ -92,7 +95,7 @@ Each stack represents a distinct responsibility domain:
 |-----------|---------------|---------------------|
 | **Infrastructure as Code** | AWS CDK with TypeScript | - Strong type safety for infrastructure code<br>- Reusable component patterns<br>- Full programming language capabilities |
 | **Compute Layer** | ECS Fargate with Spot | - Simplified container management<br>- Automatic scaling capabilities<br>- Resource optimization through spot instances |
-| **Security Architecture** | CloudFront + WAF + Public Subnets | - Edge protection with DDoS mitigation<br>- WebSocket support for real-time features<br>- Optimized network cost through public subnet design |
+| **Security Architecture** | Cloudflare CDN + WAF + Public Subnets | - Edge protection with DDoS mitigation<br>- WebSocket support for real-time features<br>- Optimized network cost through public subnet design<br>- Automated CAPTCHA for bots |
 | **Service Integration** | Factory Pattern | - Provider-agnostic interfaces<br>- Runtime service switching<br>- Simplified vendor migrations |
 
 ## Technical Deep Dives & Implementation Details 🔬
@@ -125,15 +128,17 @@ The choice of AWS CDK with TypeScript emerged from careful consideration of infr
 
 <details>
 <summary>🌐 <b>Network Architecture</b> - Optimized Multi-AZ Design</summary>
-### Network Architecture - Optimzied Multi-AZ Design
+### Network Architecture - Optimized Multi-AZ Design
 
 ```mermaid
 graph LR
-    A[CloudFront] --> B[WAF]
-    B --> C[ALB]
-    C --> D[ECS Tasks]
-    D --> E[Internet Gateway]
-    E --> F[External APIs]
+    A[Cloudflare DNS] --> B[Cloudflare CDN]
+    B --> C[Cloudflare WAF]
+    C --> D[ALB]
+    D --> E[ECS Tasks]
+    E --> F[Internet Gateway]
+    F --> G[External APIs]
+    H[Cloudflare IP Updater] -.-> I[Security Groups]
 ```
 
 **Initial Challenge:**
@@ -147,13 +152,16 @@ graph LR
 1. Started with API Gateway approach
 2. Identified WebSocket limitations
 3. Shifted to CloudFront + WAF
-4. Implemented public subnet strategy
+4. Evolved to Cloudflare CDN + WAF
+5. Implemented public subnet strategy
+6. Added automatic Cloudflare IP range updates
 
 **Key Design Patterns:**
-- Edge security with CloudFront
-- Traffic filtering through WAF
+- Edge security with Cloudflare
+- Traffic filtering through Cloudflare WAF
 - Direct routing for external APIs
 - WebSocket protocol support
+- Automated security group management
 </details>
 
 <details>
@@ -212,13 +220,13 @@ documents = vector_store.similarity_search(query, k=3)
 ```mermaid
 sequenceDiagram
     participant Client
-    participant CF as CloudFront
+    participant CF as Cloudflare
     participant ALB as Load Balancer
     participant ECS as Container
     
     Note over Client,ECS: Initial Connection
     Client->>CF: WebSocket Upgrade Request
-    CF->>ALB: Forward Upgrade (Custom Policy)
+    CF->>ALB: Forward Upgrade
     ALB->>ECS: Establish WebSocket
     
     Note over Client,ECS: Message Flow
@@ -238,24 +246,13 @@ Initially implemented with API Gateway, but encountered limitations:
 1. Analyzed API Gateway limitations
 2. Explored CloudFront capabilities
 3. Implemented custom origin policies
-4. Added session affinity for stable connections
+4. Evolved to Cloudflare for simplified WebSocket support
+5. Added session affinity for stable connections
 
 **Key Configuration:**
-```typescript
-// CloudFront WebSocket behavior
-const webSocketBehavior = new cloudfront.BehaviorOptions({
-  allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-  originRequestPolicy: new cloudfront.OriginRequestPolicy(this, 'WebSocketPolicy', {
-    headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
-      'Sec-WebSocket-Key',
-      'Sec-WebSocket-Version',
-      'Sec-WebSocket-Protocol',
-      'Sec-WebSocket-Accept'
-    ),
-    queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all()
-  })
-});
-```
+- Cloudflare WebSocket support enabled through dashboard
+- ALB configured to handle WebSocket connections
+- Security groups automatically updated with Cloudflare IP ranges
 </details>
 
 <details>
@@ -426,9 +423,9 @@ graph TD
  
 - Least privilege IAM policies
 - Implement proper network isolation
-- Security groups limited to CloudFront IPs
-- WAF configuration with rate limiting
-- SSL/TLS encryption for all traffic
+- Security groups automatically updated with Cloudflare IP ranges
+- Cloudflare WAF with Bot Fight Mode and rate limiting
+- SSL/TLS encryption for all traffic (Full Strict mode)
 - Secrets Manager for secure credential storage
 
 ## Future Enhancements 🔮

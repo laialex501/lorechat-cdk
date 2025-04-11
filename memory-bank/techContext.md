@@ -38,13 +38,14 @@ graph TD
 
 ## Service Architecture
 
-### AWS Service Integration & Data Flow
+### Service Integration & Data Flow
 ```mermaid
 graph TD
     subgraph "Edge Layer"
-        CF[CloudFront] --> WAF
+        CF[Cloudflare DNS] --> CDN[Cloudflare CDN]
+        CDN --> WAF[Cloudflare WAF]
         WAF --> ALB[Load Balancer]
-        R53[Route 53] --> CF
+        CIU[Cloudflare IP Updater] -.-> SG[Security Groups]
     end
     
     subgraph "WebSocket Handling"
@@ -74,21 +75,10 @@ graph TD
 ```
 
 ### WebSocket Configuration
-```typescript
-// CloudFront WebSocket setup
-const webSocketBehavior = new cloudfront.BehaviorOptions({
-  allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-  originRequestPolicy: new cloudfront.OriginRequestPolicy(this, 'WebSocketPolicy', {
-    headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
-      'Sec-WebSocket-Key',
-      'Sec-WebSocket-Version',
-      'Sec-WebSocket-Protocol',
-      'Sec-WebSocket-Accept'
-    ),
-    queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all()
-  })
-});
 
+WebSocket support is enabled through the Cloudflare dashboard under Network → WebSockets.
+
+```typescript
 // ALB WebSocket target group
 const webSocketTargetGroup = new elbv2.ApplicationTargetGroup(this, 'WebSocketGroup', {
   vpc,
@@ -100,6 +90,40 @@ const webSocketTargetGroup = new elbv2.ApplicationTargetGroup(this, 'WebSocketGr
     interval: Duration.seconds(30)
   }
 });
+```
+
+### Cloudflare IP Updater
+```typescript
+// Cloudflare IP Updater construct
+export class CloudflareIpUpdater extends Construct {
+  constructor(scope: Construct, id: string, props: CloudflareIpUpdaterProps) {
+    super(scope, id);
+    
+    // Create Lambda function
+    const updaterFunction = new lambda.Function(
+      this,
+      "CloudflareIpUpdaterFunction",
+      {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        handler: "index.handler",
+        code: lambda.Code.fromAsset(
+          path.join(__dirname, "../../lambda/cloudflare_ip_updater")
+        ),
+        timeout: cdk.Duration.minutes(5),
+        environment: {
+          SECURITY_GROUP_ID: props.securityGroup.securityGroupId,
+          PORTS: props.ports.join(","),
+        },
+      }
+    );
+    
+    // Schedule weekly updates
+    new events.Rule(this, "ScheduleRule", {
+      schedule: events.Schedule.rate(cdk.Duration.days(7)),
+      targets: [new targets.LambdaFunction(updaterFunction)],
+    });
+  }
+}
 ```
 
 ### Development Workflow
@@ -120,8 +144,9 @@ graph LR
 
 #### Edge & Network Layer
 - Multi-AZ deployment with public subnets
-- CloudFront + WAF for security and caching
-- Custom WebSocket configuration
+- Cloudflare CDN + WAF for security and caching
+- Cloudflare WebSocket support
+- Cloudflare IP Updater for security group management
 - Session affinity for connections
 
 #### Compute Layer
@@ -158,11 +183,11 @@ class HybridSearchService implements SearchService {
 ```
 
 ### 2. Security Implementation
-- WAF rules and rate limiting
-- Security group restrictions
+- Cloudflare WAF with Bot Fight Mode
+- Automated security group updates with Cloudflare IP ranges
 - IAM least privilege model
 - Secrets Manager integration
-- Encryption at rest and in transit
+- Encryption at rest and in transit (Full Strict SSL/TLS mode)
 
 ### 3. Development Practices
 - Memory bank documentation
@@ -180,9 +205,9 @@ class HybridSearchService implements SearchService {
 
 ## Technical Constraints
 
-### 1. AWS Service Limits
+### 1. Service Limits
 - ECS task limits
-- CloudFront distribution limits
+- Cloudflare rate limits
 - Lambda concurrency
 - S3 event notifications
 - API rate limits
@@ -197,7 +222,7 @@ class HybridSearchService implements SearchService {
 ### 3. Cost Considerations
 - Multi-AZ requirements
 - Spot instance availability
-- CloudFront pricing
+- Cloudflare free tier utilization
 - Vector storage costs
 - Lambda execution
 
@@ -239,11 +264,11 @@ scaling.scaleOnRequestCount('RequestScaling', {
 ### Infrastructure Resources
 - VPC: Dual AZ, public subnets, no NAT Gateways
 - ECS: Fargate Spot, optimized compute settings
-- Security: Least privilege IAM, CloudFront-only access
+- Security: Least privilege IAM, Cloudflare IP-only access
 - Storage: Hybrid vector search implementation
 - Compute: Optimized Lambda configurations
 - Monitoring: Enhanced CloudWatch integration
-- Caching: Intelligent CloudFront policies
+- Caching: Cloudflare caching policies
 
 ## Development Guidelines
 
@@ -262,41 +287,17 @@ const securityGroup = new ec2.SecurityGroup(this, 'ServiceSG', {
   allowAllOutbound: false
 });
 
-// CloudFront-only access
+// Allow HTTPS from within VPC
 securityGroup.addIngressRule(
-  ec2.Peer.ipv4(cloudFrontIp),
+  ec2.Peer.ipv4(vpc.vpcCidrBlock),
   ec2.Port.tcp(443),
-  'Allow HTTPS from CloudFront'
+  'Allow HTTPS from within VPC'
 );
 
-// WAF configuration
-const waf = new wafv2.CfnWebACL(this, 'WAF', {
-  defaultAction: { allow: {} },
-  scope: 'CLOUDFRONT',
-  visibilityConfig: {
-    cloudWatchMetricsEnabled: true,
-    metricName: 'WAFMetrics',
-    sampledRequestsEnabled: true
-  },
-  rules: [
-    // Rate limiting
-    {
-      name: 'RateLimit',
-      priority: 1,
-      action: { block: {} },
-      statement: {
-        rateBasedStatement: {
-          limit: 2000,
-          aggregateKeyType: 'IP'
-        }
-      },
-      visibilityConfig: {
-        cloudWatchMetricsEnabled: true,
-        metricName: 'RateLimitMetric',
-        sampledRequestsEnabled: true
-      }
-    }
-  ]
+// Add Cloudflare IP Updater
+new CloudflareIpUpdater(this, "CloudflareIpUpdater", {
+  securityGroup: securityGroup,
+  ports: [443], // HTTPS port
 });
 ```
 
@@ -305,7 +306,8 @@ const waf = new wafv2.CfnWebACL(this, 'WAF', {
 - Spot instance management
 - Efficient Lambda execution
 - Optimized vector operations
-- Smart caching strategies
+- Cloudflare caching strategies
+- Cloudflare free tier utilization
 
 ### Development Workflow
 - Clear stack separation

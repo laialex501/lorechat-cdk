@@ -1,19 +1,27 @@
 # LoreChatCDK Active Context
 
 ## Current Status
-Phase 4: Documentation and Agentic Development Integration
+Phase 4: Documentation and Infrastructure Modernization
 
 ### Recent Updates
-1. **Technical Documentation Enhancement**
-   - Added detailed WebSocket evolution documentation
+1. **Infrastructure Modernization**
+   - Migrated from CloudFront + WAF to Cloudflare CDN + WAF
+   - Implemented Cloudflare IP Updater Lambda function
+   - Updated security groups to work with Cloudflare
+   - Simplified WebSocket handling through Cloudflare
+   - Maintained DNS validation for ACM certificates
+   - Fixed Cloudflare IP Updater Lambda function to handle AWS security group rule limits using CIDR aggregation
+
+2. **Technical Documentation Enhancement**
+   - Updated architecture diagrams for Cloudflare integration
    - Implemented comprehensive data flow diagrams
    - Created hybrid search implementation details
    - Enhanced auto-scaling strategy documentation
    - Added data processing pipeline visualization
 
-2. **Infrastructure Documentation**
-   - Detailed CloudFront + WAF configuration
-   - WebSocket handling with custom policies
+3. **Infrastructure Documentation**
+   - Detailed Cloudflare configuration steps in DEVELOPMENT.md
+   - WebSocket handling through Cloudflare
    - Auto-scaling implementation details
    - Service factory pattern examples
 
@@ -37,8 +45,9 @@ graph TD
     A[Infrastructure] --> B[Documentation]
     A --> C[Security]
     B --> D[Architecture Diagrams]
-    C --> E[CloudFront + WAF]
-    B --> F[Agentic Development]
+    C --> E[Cloudflare Integration]
+    E --> F[IP Range Automation]
+    B --> G[Agentic Development]
 ```
 
 ### In Progress
@@ -49,14 +58,21 @@ graph TD
 - System flow diagram updates
 
 ### Recently Completed
-1. **Technical Deep Dives**
+1. **Infrastructure Modernization**
+   - Cloudflare CDN + WAF integration
+   - Cloudflare IP Updater Lambda implementation
+   - Security group automation
+   - WebSocket handling simplification
+   - Documentation updates
+
+2. **Technical Deep Dives**
    - WebSocket evolution documentation
    - Hybrid search implementation details
    - Auto-scaling strategy documentation
    - Data processing pipeline visualization
 
-2. **Implementation Details**
-   - CloudFront WebSocket configuration
+3. **Implementation Details**
+   - Cloudflare integration
    - Factory pattern implementations
    - Auto-scaling setup
    - Data processing optimizations
@@ -81,7 +97,8 @@ graph TD
    - Add error handling details
    - Expand testing strategies
    - Document performance optimizations
-   - Enhance security implementation details
+   - Enhance Cloudflare security implementation details
+   - Test Cloudflare IP Updater Lambda function
 
 2. System Flows
    - Add error recovery flows

@@ -1,0 +1,10 @@
+{
+  "name": "cloudflare-ip-updater",
+  "version": "1.0.0",
+  "description": "Lambda function to update security group rules with Cloudflare IP ranges",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-ec2": "^3.0.0",
+    "cidr-tools": "11.0.3"
+  }
+}
