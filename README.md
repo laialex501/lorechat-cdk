@@ -10,12 +10,13 @@
 
 ## Project Overview 🎯
 
-Welcome to my GenAI portfolio project. This project implements a production-ready AWS infrastructure using CDK (TypeScript) to power [LoreChat](https://github.com/laialex501/lorechat-container), a Streamlit-based conversational AI platform.
+Welcome to my GenAI portfolio project. This project implements a production-ready AWS infrastructure using CDK (TypeScript) to power [LoreChat](https://github.com/laialex501/lorechat-container), a Streamlit-based conversational AI platform with advanced agentic capabilities.
 
 ## Technical Highlights 💫
 
 - 🏗️ **Modular Stack Architecture** - Separate infrastructure, service, data, and monitoring stacks
 - 🔐 **Security-First Design** - Cloudflare WAF + CDN architecture with least-privilege IAM
+- 🧠 **Agentic Workflow System** - Graph-based query decomposition and parallel processing
 - 🎭 **Provider-Agnostic AI** - Abstract interfaces for LLM and vector store services. Supports GPT, Claude, and Deepseek.
 - 🐳 **Container-Ready** - Deploy consistently across environments
 - 🔄 **Intelligent Auto-scaling** - ECS Fargate with spot instance optimization
@@ -40,26 +41,39 @@ graph TD
         J[LLM Service Factory]
     end
 
+    subgraph "Agentic Workflow System"
+        I --> K[Decomposition Node]
+        K --> L[Processing Node]
+        L --> M[Combination Node]
+        M --> N[Response Node]
+        O[Specialized LLM Selection]
+        O -.-> K
+        O -.-> L
+        O -.-> M
+        O -.-> N
+    end
+
     subgraph "Data Stack (Processing & Storage)"
-        K[S3 Source Bucket]
-        L[Data Processing Lambda]
-        M[Vectorization Lambda]
-        K --> L --> M
+        P[S3 Source Bucket]
+        Q[Data Processing Lambda]
+        R[Vectorization Lambda]
+        P --> Q --> R
     end
 
     subgraph "Monitoring Stack (Observability)"
-        N[CloudWatch Dashboards]
-        O[Budget Alarms]
+        S[CloudWatch Dashboards]
+        T[Budget Alarms]
     end
 
     subgraph "External Services"
-        P[Vector Store]
-        Q[LLM Providers]
+        U[Vector Store]
+        V[LLM Providers]
     end
 
-    M --> P
-    H --> J --> Q
-    P --> H
+    R --> U
+    J --> V
+    U --> L
+    V --> O
 ```
 
 ### Separation of Concerns
@@ -76,6 +90,7 @@ Each stack represents a distinct responsibility domain:
    - Container orchestration with ECS Fargate
    - Spot instance utilization
    - Service discovery and load balancing
+   - Agentic workflow system integration
 
 3. 💾 **Data Stack**
    - Structured data processing pipeline
@@ -95,6 +110,7 @@ Each stack represents a distinct responsibility domain:
 |-----------|---------------|---------------------|
 | **Infrastructure as Code** | AWS CDK with TypeScript | - Strong type safety for infrastructure code<br>- Reusable component patterns<br>- Full programming language capabilities |
 | **Compute Layer** | ECS Fargate with Spot | - Simplified container management<br>- Automatic scaling capabilities<br>- Resource optimization through spot instances |
+| **Agentic System** | LangGraph with Specialized LLMs | - Query decomposition for complex questions<br>- Parallel processing for efficiency<br>- Specialized LLM selection for different reasoning tasks |
 | **Security Architecture** | Cloudflare CDN + WAF + Public Subnets | - Edge protection with DDoS mitigation<br>- WebSocket support for real-time features<br>- Optimized network cost through public subnet design<br>- Automated CAPTCHA for bots |
 | **Service Integration** | Factory Pattern | - Provider-agnostic interfaces<br>- Runtime service switching<br>- Simplified vendor migrations |
 
@@ -124,6 +140,106 @@ The choice of AWS CDK with TypeScript emerged from careful consideration of infr
 - Independent deployment capabilities
 - Clear responsibility boundaries
 - Simplified maintenance
+</details>
+
+<details>
+<summary>🧠 <b>Agentic Workflow System</b> - Graph-based Intelligent Processing</summary>
+### Agentic Workflow System - Graph-based Intelligent Processing
+
+The agentic workflow system represents a significant advancement in conversational AI capabilities, enabling sophisticated query handling through a graph-based approach:
+
+```mermaid
+graph TD
+    A[User Query] --> B[Decomposition Node]
+    B --> C[Process Node]
+    C --> D[Result Combination Node]
+    D --> E[Response Node]
+
+    subgraph "Process Node Implementation"
+        F[Retrieval] --> G[Evaluation]
+        G -->|Sufficient| H[Subquery Context]
+        G -->|Insufficient| I[Refinement]
+        I --> F
+    end
+
+    C -.-> F
+    H -.-> C
+```
+
+**Architectural Decision Points:**
+
+1. **Graph vs. Chain Structure**
+   - **Challenge**: Traditional chain-based approaches lack flexibility for complex reasoning
+   - **Solution**: Implemented explicit graph structure with specialized nodes
+   - **Benefit**: Clear reasoning paths, better error isolation, and explicit state transitions
+
+2. **Query Decomposition Strategy**
+   - **Challenge**: Complex queries require multi-faceted understanding
+   - **Solution**: Implemented intelligent decomposition into subqueries
+   - **Benefit**: More comprehensive answers through specialized processing
+
+3. **Parallel Processing Architecture**
+   - **Challenge**: Sequential processing creates high latency
+   - **Solution**: Implemented asyncio-based parallel subquery processing
+   - **Benefit**: Significantly reduced response time for complex queries
+
+4. **Specialized LLM Selection**
+   - **Challenge**: Different reasoning tasks require different model capabilities
+   - **Solution**: Implemented node-specific LLM selection
+   - **Benefit**: Optimized cost-performance balance with specialized reasoning
+
+**Infrastructure Integration:**
+
+The agentic system is containerized and deployed through our ECS Fargate service, with several key infrastructure considerations:
+
+1. **Compute Requirements**
+   - Higher memory allocation for parallel processing
+   - CPU optimization for concurrent operations
+   - Auto-scaling based on query complexity patterns
+
+2. **Networking Considerations**
+   - WebSocket support for streaming responses
+   - Session affinity for consistent user experience
+   - Optimized connection handling for multiple LLM calls
+
+3. **Monitoring Integration**
+   - Custom CloudWatch metrics for node performance
+   - Specialized logging for reasoning paths
+   - Performance tracking across different query types
+
+**Real-world Example Flow:**
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant D as Decomposition
+    participant P as Processing
+    participant C as Combination
+    participant R as Response
+
+    U->>D: "What are the economic and environmental impacts of renewable energy?"
+    Note over D: Analyzes query complexity
+    D->>P: Decomposes into 3 subqueries
+    
+    par Process in Parallel
+        P->>P: "What are the economic impacts of renewable energy?"
+        Note over P: Retrieved docs, evaluated, generated answer
+        
+        P->>P: "What are the environmental benefits of renewable energy?"
+        Note over P: Retrieved docs, evaluated, generated answer
+        
+        P->>P: "Are there any environmental drawbacks to renewable energy?"
+        Note over P: Retrieved docs insufficient
+        Note over P: Refined query, retrieved new docs, generated answer
+    end
+    
+    P->>C: All subquery results
+    C->>C: Combine into coherent answer
+    C->>R: Format with sources
+    R->>U: Stream final response
+```
+
+This sophisticated system enables LoreChat to handle complex, multi-faceted queries with greater depth and accuracy than traditional approaches, while maintaining reasonable response times through parallel processing and specialized model selection.
 </details>
 
 <details>
@@ -178,7 +294,7 @@ def create_chat_service():
             provider=st.session_state.provider,
             model_name=st.session_state.model_name
         ),
-        vector_store=VectorStoreFactory.get_vector_store(),
+        vector_store=VectorStoreFactory.create_vector_store(),
         persona_type=st.session_state.persona
     )
 ```
@@ -200,7 +316,7 @@ response = llmService.generate_response(prompt)
 **Vector Store Integration:**
 ```python
 # Abstract factory for vector stores
-vector_store = VectorStoreFactory.get_vector_store()
+vector_store = VectorStoreFactory.create_vector_store()
 query = "Hello world"
 documents = vector_store.similarity_search(query, k=3)
 ```
@@ -400,7 +516,12 @@ graph TD
    - Provider-agnostic interfaces
    - Runtime configuration
 
-4. **Monitoring & Maintenance**
+4. **Agentic Processing**
+   - Graph-based workflow
+   - Parallel subquery handling
+   - Specialized LLM selection
+
+5. **Monitoring & Maintenance**
    - Custom CloudWatch metrics
    - Budget tracking
    - Resource optimization
@@ -413,6 +534,7 @@ graph TD
 - CloudFront caching to reduce origin requests
 - Short log retention periods (1 week)
 - Dual AZ deployment for availability
+- Specialized LLM selection to optimize cost-performance ratio
 
 ### Security
  
@@ -545,6 +667,12 @@ Planned architectural improvements:
    - Voice interaction support
    - Multi-agent orchestration
    - Advanced analytics integration
+
+4. **Agentic System Enhancements**
+   - Multi-hop reasoning capabilities
+   - Dynamic LLM selection based on query characteristics
+   - Adaptive decomposition strategies
+   - Feedback loop for continuous improvement
 
 ## Connect & Contribute 🤝
 
