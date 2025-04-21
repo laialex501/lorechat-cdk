@@ -10,7 +10,23 @@
 
 ## Project Overview 🎯
 
-Welcome to my GenAI portfolio project. This project implements a production-ready AWS infrastructure using CDK (TypeScript) to power [LoreChat](https://github.com/laialex501/lorechat-container), a Streamlit-based conversational AI platform with advanced agentic capabilities.
+Welcome to my GenAI portfolio project. This project implements a production-ready AWS infrastructure using CDK (TypeScript) to power [LoreChat](https://github.com/laialex501/lorechat-container).
+
+LoreChat is a Streamlit-based conversational AI chat platform that makes website content interactive through smart conversations. It uses an agentic workflow and retrieval-augmented-generation (RAG) to intelligently answer user queries.
+
+![Demo image](lorechat-demo-4-20-25.png)
+
+The system works through four connected parts:
+- It breaks complex questions into smaller parts
+- It processes all parts at the same time using parallel computing
+- It combines all answers into one coherent response
+- It adds clear source links to show where information came from
+
+LoreChat uses hybrid search with both meaning-based vectors and keyword matching. By working on multiple question aspects at once, it delivers faster responses.
+
+The system smartly assigns different AI models to tasks they do best. This optimizes both cost and performance.
+
+It is built with modern AI tools like LangChain and LangGraph, and works with OpenAI, Anthropic, and other providers. It runs smoothly in the cloud using Docker.
 
 ## Technical Highlights 💫
 
